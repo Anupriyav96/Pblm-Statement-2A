@@ -1,0 +1,53 @@
+#!/bin/bash
+
+# Source directory to be backed up
+SRC_DIR="/path/to/source"
+
+# Remote server details
+SSH_USER="remote_user"
+SSH_HOST="remote_host"
+DEST_DIR="/path/to/remote/destination"
+
+# Email address to receive backup reports
+EMAIL_TO="anpriyav96@gmail.com"
+
+# Function to perform backup using rsync
+perform_backup() {
+    echo "Starting backup at $(date +'%Y-%m-%d %H:%M:%S')..."
+    # Perform rsync backup
+    rsync -avz --delete "$SRC_DIR" "$SSH_USER@$SSH_HOST:$DEST_DIR"
+    local exit_status=$?
+    if [ $exit_status -eq 0 ]; then
+        echo "Backup completed successfully."
+        return 0
+    else
+        echo "Backup failed with rsync exit status $exit_status."
+        return 1
+    fi
+}
+
+# Function to send email report
+send_email_report() {
+    local backup_status="$1"
+    if [ "$backup_status" == "success" ]; then
+        email_subject="Backup Successful: $(date +'%Y-%m-%d %H:%M:%S')"
+        email_body="The backup of directory $SRC_DIR to $SSH_HOST:$DEST_DIR was successful."
+    else
+        email_subject="Backup Failed: $(date +'%Y-%m-%d %H:%M:%S')"
+        email_body="The backup of directory $SRC_DIR to $SSH_HOST:$DEST_DIR failed. Please check the logs for details."
+    fi
+    echo "$email_body" | mailx -s "$email_subject" "$EMAIL_TO"
+}
+
+# Perform the backup
+perform_backup
+
+# Capture backup status
+if [ $? -eq 0 ]; then
+    backup_status="success"
+else
+    backup_status="failure"
+fi
+
+# Send email report
+send_email_report "$backup_status"
