@@ -1,0 +1,39 @@
+#!/bin/bash
+
+# Thresholds (adjust these as per your requirements)
+CPU_THRESHOLD=80     # in percent
+MEMORY_THRESHOLD=80  # in percent
+DISK_THRESHOLD=80    # in percent
+PROCESS_THRESHOLD=500  # number of processes
+
+# Function to log messages to console and/or a log file
+log_message() {
+    local message="$1"
+    echo "$(date +'%Y-%m-%d %H:%M:%S') - $message"
+    # Uncomment the line below to log to a file
+    # echo "$(date +'%Y-%m-%d %H:%M:%S') - $message" >> /var/log/system_monitor.log
+}
+
+# Check CPU usage
+cpu_usage=$(top -bn1 | grep "Cpu(s)" | sed "s/.*, *\([0-9.]*\)%* id.*/\1/" | awk '{print 100 - $1}')
+if (( $(echo "$cpu_usage > $CPU_THRESHOLD" | bc -l) )); then
+    log_message "CPU usage is high: ${cpu_usage}%"
+fi
+
+# Check memory usage
+memory_usage=$(free | awk '/Mem/{printf("%d"), $3/$2*100}')
+if (( memory_usage > MEMORY_THRESHOLD )); then
+    log_message "Memory usage is high: ${memory_usage}%"
+fi
+
+# Check disk usage
+disk_usage=$(df --output=pcent / | sed '1d;s/[^0-9]//g')
+if (( disk_usage > DISK_THRESHOLD )); then
+    log_message "Disk usage is high: ${disk_usage}%"
+fi
+
+# Check number of running processes
+process_count=$(ps ax | wc -l)
+if (( process_count > PROCESS_THRESHOLD )); then
+    log_message "Number of processes exceeds threshold: ${process_count}"
+fi
